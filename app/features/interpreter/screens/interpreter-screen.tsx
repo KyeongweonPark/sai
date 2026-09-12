@@ -1,6 +1,9 @@
 "use client";
 
 import { ArrowLeftRight } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { languageLabel, LANGUAGES, LANGUAGE_CODES } from "../lib/languages";
+import type { Locale } from "../types";
 
 import { ConversationPanel } from "../components/conversation-panel";
 import { InterpreterControls } from "../components/interpreter-controls";
@@ -19,11 +22,12 @@ export function InterpreterScreen() {
     connecting, copy, disconnect, enableAudio, error, input, locale, messages,
     openPinDialog, phaseText, pin, pinDialogOpen, pinError, sendText, setInput,
     setLocale, setPin, setSoundEnabled, soundEnabled, submitPin, textBusy,
+    targetLanguage, setTargetLanguage,
   } = useInterpreter();
 
   return (
     <div className="shell">
-      <InterpreterHeader copy={copy} locale={locale} onLocaleChange={setLocale} />
+      <InterpreterHeader copy={copy} locale={locale} onLocaleChange={setLocale} disabled={checkingPin} />
       <main className="workspace">
         <div className="page-heading">
           <div><p className="eyebrow">{copy.eyebrow}</p><h1>{copy.heading}</h1></div>
@@ -33,12 +37,15 @@ export function InterpreterScreen() {
         </div>
         <section className="chat-card" aria-label={copy.title}>
           <div className="language-bar">
-            <div><span className="language-symbol ko">가</span><span>{copy.korean}<small>Korean</small></span></div>
+            <div><span className="language-symbol ko">{LANGUAGES[locale].symbol}</span><span>{LANGUAGES[locale].name}</span></div>
             <ArrowLeftRight className="swap" size={20} />
-            <div><span className="language-symbol ja">あ</span><span>{copy.japanese}<small>Japanese</small></span></div>
+            <Select value={targetLanguage} disabled={checkingPin} onValueChange={(value) => setTargetLanguage(value as Locale)}>
+              <SelectTrigger className="locale-select" aria-label={copy.translation}><SelectValue /></SelectTrigger>
+              <SelectContent>{LANGUAGE_CODES.filter((code) => code !== locale).map((code) => <SelectItem key={code} value={code}>{languageLabel(locale, code)}</SelectItem>)}</SelectContent>
+            </Select>
             <span className="auto-label">{copy.auto}</span>
           </div>
-          <ConversationPanel copy={copy} messages={messages} bottomRef={bottomRef} />
+          <ConversationPanel copy={copy} messages={messages} bottomRef={bottomRef} sourceLanguage={locale} targetLanguage={targetLanguage} />
           <InterpreterControls
             active={active}
             audioBlocked={audioBlocked}

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { Locale } from "../types";
+import { LANGUAGES } from "./languages";
 
 export type InterpreterCopy = {
   title: string;
@@ -50,7 +51,7 @@ export type InterpreterCopy = {
  * 사용자에게 보이는 문구는 화면 컴포넌트와 분리합니다.
  * 새 언어를 추가할 때 UI 로직을 수정하지 않고 이 객체와 Locale만 확장하면 됩니다.
  */
-export const COPY: Record<Locale, InterpreterCopy> = {
+const BASE_COPY: Record<"ko" | "ja" | "en", InterpreterCopy> = {
   ko: {
     title: "한일 실시간 통역",
     pin: "PIN 보호",
@@ -182,8 +183,84 @@ export const COPY: Record<Locale, InterpreterCopy> = {
   },
 };
 
+export const COPY: Record<Locale, InterpreterCopy> = {
+  ...BASE_COPY,
+  fr: {
+    ...BASE_COPY.en,
+    title: "Interprétation en direct", pin: "Protégé par PIN", heading: "Une conversation, au-delà des langues.",
+    connected: "Connecté", connecting: "Connexion…", offline: "Non connecté", auto: "Détection automatique",
+    empty: "Commencez à traduire, aussi simplement qu’un message.", example: "Exemple", source: "Original", translation: "Traduction",
+    hearing: "Écoute…", ready: "Prêt à discuter ?", readySub: "Appuyez sur Démarrer et parlez naturellement.",
+    listening: "À l’écoute", translating: "Traduction en cours", speaking: "Lecture de la traduction",
+    activeSub: "Continuez après la traduction.", start: "Démarrer", cancel: "Annuler", stop: "Arrêter",
+    typeActive: "Saisissez un message à traduire", typeInactive: "Démarrez pour saisir un message",
+    headphones: "Utilisez des écouteurs pour un son plus clair", sound: "Sortie vocale",
+    based: "OpenAI Realtime · Interprétation vocale IA", retained: "La conversation reste dans cette fenêtre.",
+    pinTitle: "Saisissez le PIN", pinDesc: "Saisissez votre PIN à quatre chiffres.", checking: "Vérification…", confirm: "Vérifier et démarrer",
+    pinNote: "Autorisez le microphone après la vérification. Les voix et messages sont envoyés à OpenAI pour traduction.",
+    audio: "Autoriser la lecture audio", genericError: "Échec de l’interprétation. Réessayez dans un instant.",
+    textError: "Échec de la traduction. Veuillez réessayer.", microphonePermission: "Autorisez le microphone dans les paramètres du navigateur.", lang: "Langue de la page",
+  },
+  de: {
+    ...BASE_COPY.en,
+    title: "Live-Dolmetscher", pin: "PIN-geschützt", heading: "Ein Gespräch, über Sprachgrenzen hinweg.",
+    connected: "Verbunden", connecting: "Verbindung…", offline: "Nicht verbunden", auto: "Automatisch erkennen",
+    empty: "Übersetzen Sie so einfach wie eine Nachricht.", example: "Beispiel", source: "Original", translation: "Übersetzung",
+    hearing: "Höre zu…", ready: "Bereit für ein Gespräch?", readySub: "Drücken Sie Start und sprechen Sie natürlich.",
+    listening: "Höre zu", translating: "Wird übersetzt", speaking: "Übersetzung wird abgespielt",
+    activeSub: "Sprechen Sie nach der Übersetzung weiter.", start: "Starten", cancel: "Abbrechen", stop: "Beenden",
+    typeActive: "Nachricht zum Übersetzen eingeben", typeInactive: "Zum Schreiben zuerst starten",
+    headphones: "Kopfhörer verbessern den Klang", sound: "Sprachausgabe",
+    based: "OpenAI Realtime · KI-Dolmetscher", retained: "Das Gespräch bleibt in diesem Fenster.",
+    pinTitle: "PIN eingeben", pinDesc: "Geben Sie die vierstellige PIN ein.", checking: "Wird geprüft…", confirm: "Prüfen und starten",
+    pinNote: "Erlauben Sie nach der PIN-Prüfung den Mikrofonzugriff. Sprache und Nachrichten werden zur Übersetzung an OpenAI gesendet.",
+    audio: "Audiowiedergabe erlauben", genericError: "Dolmetschen fehlgeschlagen. Bitte erneut versuchen.",
+    textError: "Übersetzung fehlgeschlagen. Bitte erneut versuchen.", microphonePermission: "Erlauben Sie den Mikrofonzugriff in den Browsereinstellungen.", lang: "Seitensprache",
+  },
+  zh: {
+    ...BASE_COPY.en,
+    title: "实时口译", pin: "PIN 保护", heading: "跨越语言，自在交流。",
+    connected: "已连接", connecting: "正在连接", offline: "未连接", auto: "自动检测",
+    empty: "像发消息一样轻松开始口译。", example: "示例", source: "原文", translation: "译文",
+    hearing: "正在聆听…", ready: "准备好交流了吗？", readySub: "点击开始，自然说话即可。",
+    listening: "正在聆听", translating: "正在翻译", speaking: "正在播放译文",
+    activeSub: "翻译结束后请继续说话。", start: "开始口译", cancel: "取消", stop: "结束口译",
+    typeActive: "也可以输入文字进行翻译", typeInactive: "开始口译后即可输入文字",
+    headphones: "使用耳机会更清晰", sound: "语音输出",
+    based: "OpenAI Realtime · AI 语音口译", retained: "对话仅保留在此窗口中。",
+    pinTitle: "输入 PIN", pinDesc: "请输入四位 PIN。", checking: "正在验证…", confirm: "验证并开始",
+    pinNote: "验证 PIN 后请允许使用麦克风。语音和文字将发送至 OpenAI 进行翻译。",
+    audio: "允许播放译文", genericError: "口译失败，请稍后重试。", textError: "文字翻译失败，请重试。",
+    microphonePermission: "请在浏览器设置中允许使用麦克风。", lang: "页面语言",
+  },
+};
+
+/** 언어쌍이 바뀌면 제목과 사용 안내도 같은 설정으로 다시 만듭니다. */
+export function getInterpreterCopy(source: Locale, target: Locale): InterpreterCopy {
+  const left = LANGUAGES[source].name;
+  const right = LANGUAGES[target].name;
+  const description = {
+    ko: `${left}로 말하면 ${right}로, ${right}로 말하면 ${left}로 통역합니다.`,
+    en: `Speak ${left} to hear ${right}, or ${right} to hear ${left}.`,
+    fr: `Parlez en ${left} pour entendre ${right}, ou en ${right} pour entendre ${left}.`,
+    de: `Sprechen Sie ${left}, um ${right} zu hören, oder ${right}, um ${left} zu hören.`,
+    ja: `${left}で話すと${right}に、${right}で話すと${left}に通訳します。`,
+    zh: `说${left}时翻译成${right}，说${right}时翻译成${left}。`,
+  };
+  return { ...COPY[source], title: `${left} ↔ ${right}`, emptyBody: description[source] };
+}
+
 export function microphoneUnavailable(locale: Locale) {
   const insecure = typeof window !== "undefined" && !window.isSecureContext;
+  if (locale === "fr") return insecure
+    ? "Le microphone nécessite localhost ou HTTPS. La traduction écrite reste disponible."
+    : "Microphone indisponible dans ce navigateur. Ouvrez Chrome ou Safari pour la voix. La traduction écrite reste disponible.";
+  if (locale === "de") return insecure
+    ? "Das Mikrofon benötigt localhost oder HTTPS. Textübersetzung ist weiterhin verfügbar."
+    : "Dieser Browser unterstützt keinen Mikrofonzugriff. Öffnen Sie Chrome oder Safari für Sprache. Textübersetzung ist weiterhin verfügbar.";
+  if (locale === "zh") return insecure
+    ? "麦克风需要 localhost 或 HTTPS。您仍可使用文字翻译。"
+    : "此浏览器不支持麦克风。请使用 Chrome 或 Safari 进行语音口译，文字翻译仍可使用。";
   if (locale === "ja") {
     return insecure
       ? "マイクは localhost または HTTPS でのみ使用できます。文字通訳はこのまま利用できます。"

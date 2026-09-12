@@ -24,11 +24,12 @@ export async function createRealtimeSession(
   ticket: string,
   locale: Locale,
   signal: AbortSignal,
+  targetLanguage: Locale,
 ) {
   const response = await fetch("/api/session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sdp, ticket, locale }),
+    body: JSON.stringify({ sdp, ticket, locale, sourceLanguage: locale, targetLanguage }),
     signal,
   });
   if (!response.ok) {
@@ -42,11 +43,12 @@ export async function translateText(
   text: string,
   token: string,
   locale: Locale,
+  targetLanguage: Locale,
 ) {
   const response = await fetch("/api/translate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, token, locale }),
+    body: JSON.stringify({ text, token, locale, sourceLanguage: locale, targetLanguage }),
     signal: AbortSignal.timeout(35_000),
   });
   return readJson<TranslationResult>(response);

@@ -1,5 +1,5 @@
 /** 통역 화면과 네트워크 계층이 공유하는 최소 도메인 타입입니다. */
-export type Locale = "ko" | "ja" | "en";
+export type Locale = "ko" | "en" | "fr" | "de" | "ja" | "zh";
 
 export type ConnectionStatus = "idle" | "connecting" | "connected";
 export type ConversationPhase = "ready" | "listening" | "translating" | "speaking";

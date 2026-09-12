@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createRealtimeSession, translateText, unlockInterpreter } from "../lib/client-api";
-import { COPY, microphoneUnavailable } from "../lib/copy";
+import { getInterpreterCopy, microphoneUnavailable } from "../lib/copy";
+import { isLocale } from "../lib/languages";
 import type {
   ConnectionStatus,
   ConversationMessage,
@@ -28,6 +29,7 @@ const CONNECTION_TIMEOUT_MS = 30_000;
  */
 export function useInterpreter() {
   const [locale, setLocale] = useState<Locale>("ko");
+  const [targetLanguage, setTargetLanguage] = useState<Locale>("ja");
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>("idle");
   const [phase, setPhase] = useState<ConversationPhase>("ready");
@@ -51,7 +53,7 @@ export function useInterpreter() {
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const textTokenRef = useRef("");
 
-  const copy = COPY[locale];
+  const copy = getInterpreterCopy(locale, targetLanguage);
   const active = status === "connected";
   const connecting = status === "connecting";
 
@@ -63,9 +65,11 @@ export function useInterpreter() {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
 
+    const oldPeer = peerRef.current;
+    peerRef.current = null;
     channelRef.current?.close();
     channelRef.current = null;
-    peerRef.current?.close();
+    oldPeer?.close();
     peerRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
@@ -84,10 +88,11 @@ export function useInterpreter() {
 
   useEffect(() => {
     const savedLocale = localStorage.getItem("sai-locale");
-    if (savedLocale === "ko" || savedLocale === "ja" || savedLocale === "en") {
+    if (isLocale(savedLocale)) {
       // 브라우저 저장값은 hydration 이후에만 알 수 있으므로 최초 effect에서 동기화합니다.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocale(savedLocale);
+      setTargetLanguage(savedLocale === "ja" ? "ko" : "ja");
     }
     return disconnect;
   }, [disconnect]);
@@ -242,6 +247,7 @@ export function useInterpreter() {
         ticket,
         locale,
         controller.signal,
+        targetLanguage,
       );
       if (generation !== generationRef.current) return;
       await peer.setRemoteDescription({ type: "answer", sdp: answer });
@@ -295,7 +301,9 @@ export function useInterpreter() {
     setError("");
     setTextBusy(true);
     try {
-      const result = await translateText(text, token, locale);
+      const generation = generationRef.current;
+      const result = await translateText(text, token, locale, targetLanguage);
+      if (generation !== generationRef.current) return;
       updateMessage(translationId, "assistant", result.translation);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : copy.textError);
@@ -308,6 +316,23 @@ export function useInterpreter() {
     setPin("");
     setPinError("");
     setPinDialogOpen(true);
+  }
+
+  // 기존 음성 세션의 지시문을 재사용하지 않도록 언어 변경 시 연결을 종료합니다.
+  // 다음 시작에서 선택한 언어쌍으로 새 인증/음성 세션을 생성합니다.
+  function changeSourceLanguage(language: Locale) {
+    if (checkingPin || language === locale) return;
+    disconnect();
+    setError("");
+    setLocale(language);
+    if (language === targetLanguage) setTargetLanguage(locale);
+  }
+
+  function changeTargetLanguage(language: Locale) {
+    if (checkingPin || language === locale || language === targetLanguage) return;
+    disconnect();
+    setError("");
+    setTargetLanguage(language);
   }
 
   function changePinDialog(open: boolean) {
@@ -355,7 +380,9 @@ export function useInterpreter() {
     pinError,
     sendText,
     setInput,
-    setLocale,
+    setLocale: changeSourceLanguage,
+    targetLanguage,
+    setTargetLanguage: changeTargetLanguage,
     setPin,
     setSoundEnabled,
     soundEnabled,

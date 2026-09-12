@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "사이 · 한일 실시간 통역",
-  description: "한국어와 일본어를 음성과 텍스트로 통역하는 간단한 대화창.",
+  title: "사이 · 다국어 실시간 통역",
+  description: "한국어, 영어, 프랑스어, 독일어, 일본어, 중국어 사이의 양방향 음성·문자 통역.",
   other: {
     "codex-preview": "development",
   },

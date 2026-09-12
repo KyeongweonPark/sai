@@ -1,10 +1,11 @@
 import { isSameOrigin, jsonError, localized } from "@/app/features/interpreter/server/http";
-import { REALTIME_TRANSLATION_INSTRUCTIONS } from "@/app/features/interpreter/server/prompts";
+import { translationInstructions } from "@/app/features/interpreter/server/prompts";
+import { isLocale } from "@/app/features/interpreter/lib/languages";
 import { getRuntime } from "@/app/features/interpreter/server/runtime";
 import { consumeVoiceTicket } from "@/app/features/interpreter/server/session-store";
 import type { Locale } from "@/app/features/interpreter/types";
 
-type SessionBody = { sdp?: unknown; ticket?: unknown; locale?: Locale };
+type SessionBody = { sdp?: unknown; ticket?: unknown; locale?: Locale; sourceLanguage?: unknown; targetLanguage?: unknown };
 
 function openAIError(status: number) {
   if (status === 401) return "서버 API 연결 설정을 확인해 주세요.";
@@ -29,6 +30,9 @@ export async function POST(request: Request) {
       return jsonError("잘못된 요청입니다.", 400);
     }
 
+    if (!body || !isLocale(body.sourceLanguage) || !isLocale(body.targetLanguage) || body.sourceLanguage === body.targetLanguage) {
+      return jsonError("서로 다른 지원 언어 두 개를 선택해 주세요. / Select two different supported languages.", 400);
+    }
     const message = (ko: string, ja: string, en: string) => localized(body.locale, ko, ja, en);
     const { DB, OPENAI_API_KEY } = getRuntime();
     if (!DB || !OPENAI_API_KEY) {
@@ -48,7 +52,7 @@ export async function POST(request: Request) {
     const session = {
       type: "realtime",
       model: "gpt-realtime-2.1",
-      instructions: REALTIME_TRANSLATION_INSTRUCTIONS,
+      instructions: translationInstructions(body.sourceLanguage, body.targetLanguage, true),
       output_modalities: ["audio"],
       audio: {
         input: {

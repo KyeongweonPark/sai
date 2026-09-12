@@ -1,10 +1,11 @@
 import { isSameOrigin, jsonError, localized } from "@/app/features/interpreter/server/http";
-import { TEXT_TRANSLATION_INSTRUCTIONS } from "@/app/features/interpreter/server/prompts";
+import { translationInstructions } from "@/app/features/interpreter/server/prompts";
+import { isLocale } from "@/app/features/interpreter/lib/languages";
 import { getRuntime } from "@/app/features/interpreter/server/runtime";
 import { hasValidTextSession } from "@/app/features/interpreter/server/session-store";
 import type { Locale } from "@/app/features/interpreter/types";
 
-type TranslateBody = { text?: unknown; token?: unknown; locale?: Locale };
+type TranslateBody = { text?: unknown; token?: unknown; locale?: Locale; sourceLanguage?: unknown; targetLanguage?: unknown };
 type OpenAIResponse = {
   output_text?: string;
   output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
@@ -28,6 +29,9 @@ export async function POST(request: Request) {
       return jsonError("잘못된 요청입니다.", 400);
     }
 
+    if (!body || !isLocale(body.sourceLanguage) || !isLocale(body.targetLanguage) || body.sourceLanguage === body.targetLanguage) {
+      return jsonError("서로 다른 지원 언어 두 개를 선택해 주세요. / Select two different supported languages.", 400);
+    }
     const message = (ko: string, ja: string, en: string) => localized(body.locale, ko, ja, en);
     if (typeof body.text !== "string" || !body.text.trim() || body.text.length > 4000) {
       return jsonError(message("통역할 문장을 입력해 주세요.", "通訳する文章を入力してください。", "Enter a message to translate."), 400);
@@ -51,7 +55,7 @@ export async function POST(request: Request) {
     const result = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "gpt-5.6-terra", reasoning: { effort: "none" }, instructions: TEXT_TRANSLATION_INSTRUCTIONS, input: body.text.trim(), max_output_tokens: 1000 }),
+      body: JSON.stringify({ model: "gpt-5.6-terra", reasoning: { effort: "none" }, instructions: translationInstructions(body.sourceLanguage, body.targetLanguage), input: body.text.trim(), max_output_tokens: 1000 }),
       signal: AbortSignal.timeout(30_000),
     });
     if (!result.ok) {
