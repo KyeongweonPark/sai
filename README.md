@@ -27,11 +27,23 @@ npm run dev
 
 ## 주요 구조
 
-- `app/page.tsx`: 반응형 DM 스타일 UI, 음성 연결, 한국어·日本語·English UI
-- `app/api/unlock/route.ts`: PIN 검증 및 세션 발급
-- `app/api/session/route.ts`: OpenAI Realtime WebRTC 세션 생성
-- `app/api/translate/route.ts`: 인증된 문자 통역 요청
+- `app/page.tsx`: App Router 진입점. 통역 feature 화면만 연결합니다.
+- `app/features/interpreter/screens`: 화면 단위 조립 계층입니다.
+- `app/features/interpreter/components`: 헤더, 대화, 컨트롤, PIN 입력처럼 표현 책임을 분리합니다.
+- `app/features/interpreter/hooks`: 연결 상태와 WebRTC 생명주기를 관리합니다.
+- `app/features/interpreter/lib`: 다국어 문구와 브라우저용 API 클라이언트를 관리합니다.
+- `app/features/interpreter/server`: Cloudflare 바인딩, 인증 세션, 번역 정책 등 서버 전용 로직입니다.
+- `app/api`: HTTP 입력 검증과 응답만 담당하는 얇은 API 라우트입니다.
 - `db/schema.ts`, `drizzle/`: PIN 시도와 세션 티켓을 위한 D1 스키마 및 마이그레이션
 - `.openai/hosting.json`: Sites 프로젝트 연결 설정
+
+### 통역 연결 흐름
+
+1. `/api/unlock`이 PIN을 검증하고 음성용 일회성 티켓과 문자용 세션 토큰을 발급합니다.
+2. 브라우저가 마이크와 WebRTC offer를 준비하고 `/api/session`에서 OpenAI Realtime answer를 받습니다.
+3. 음성 전사와 번역 이벤트는 WebRTC data channel을 통해 대화 목록에 반영됩니다.
+4. 문자 입력은 별도의 `/api/translate` 경로를 사용하므로 마이크를 지원하지 않는 브라우저에서도 동작합니다.
+
+핵심 보안·수명주기 로직에는 구현 이유를 설명하는 주석을 두었습니다. 새 기능은 가능한 한 `features/interpreter` 내부의 같은 책임 계층에 추가하고, 라우트 파일에는 비즈니스 규칙을 직접 늘리지 않는 것을 권장합니다.
 
 `.env.example`는 필요한 변수 이름만 보여주는 예시 파일입니다. 실제 키와 PIN은 입력하지 마세요.
